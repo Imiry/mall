@@ -10,8 +10,9 @@ import GoodsListItem from './GoodsListItem'
 export default {
   name: 'GoodsList',
   components: {
-    GoodsListItem
+    GoodsListItema
   },
+
   props:{
     goods: {  //父传子的方式的到item的数据  通过遍历goods里面的数据然后把item分别放到goods-list-item 
       type: Array,
