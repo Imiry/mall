@@ -1,6 +1,6 @@
 <template>
   <div class="goods-item">
-    <img :src="goodsItem.show.img" alt="">
+    <img :src="goodsItem.show.img" alt="" @load="imageLoad">
     <div class="goods-info">
       <p>{{goodsItem.title}}</p>
       <span class="price">{{goodsItem.price}}</span>
@@ -12,14 +12,19 @@
 <script>
 export default {
   name: 'GoodsListItem',
-  props: {
+  props: { 
     goodsItem: {
       type: Object,
       default() {
         return {}
       }
     }
-  }
+  },
+  methods: {
+    imageLoad() {     //在图片上有一个load的事件，当图片加载完成，利用事件总线的方式发送一个事件，满足在home.vue中的使用：具体解决图片加载完成之后的问题
+      this.$bus.$emit('itemImageLoad')
+    }
+  },
 }
 </script>
 

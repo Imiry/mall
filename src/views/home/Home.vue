@@ -1,12 +1,21 @@
 <template>
   <div id="home">
     <nav-bar class="home-nav"><div slot="center">蘑菇街</div></nav-bar>
-    <home-swiper :banners="banners"></home-swiper>
-    <recommend-view :recommends="recommends"></recommend-view>
-    <feature-view></feature-view>
-    <tab-control class="tabcontrol" :titles="['流行','新款','精选']"></tab-control>
-    <goods-list :goods="goods['pop'].list"></goods-list>
+    <tab-control class="tabcontrol" ref="TabControl1" :titles="['流行','新款','精选']" @tabClick="tabClick" v-show="isTabFixed"></tab-control>
 
+    <scroll class="content" 
+            ref="scroll" 
+            :probe-type="3" 
+            @scroll="contentScroll" 
+            :pull-up-load="true" @pullingUp="loadMore">
+      <home-swiper :banners="banners"  @swiperImageLoad="swiperImageLoad"></home-swiper>
+      <recommend-view :recommends="recommends"></recommend-view>
+      <feature-view></feature-view>
+      <tab-control  ref="TabControl2" :titles="['流行','新款','精选']" @tabClick="tabClick"></tab-control>
+      <goods-list :goods="showGoods"></goods-list>
+    </scroll>
+
+    <back-top @click.native="backTop()" v-show="isShowBackTop"></back-top>
   </div>
 
 </template>
@@ -20,6 +29,8 @@ import FeatureView from './childComps/FeatureView'
 import NavBar from 'components/common/navbar/NavBar'
 import TabControl from 'components/content/tabControl/TabControl'
 import GoodsList from 'components/content/goods/GoodsList'
+import Scroll from 'components/common/scroll/Scroll'
+import BackTop from 'components/content/backTop/BackTop'
 
 import {getHomeMultidata,getHomeGoods} from 'network/home'
 export default {
@@ -31,7 +42,9 @@ export default {
 
     NavBar,
     TabControl,
-    GoodsList
+    GoodsList,
+    Scroll,
+    BackTop
 
   },
   data() {
@@ -42,9 +55,19 @@ export default {
         'pop': {page: 0,list: []},
         'new': {page: 0, list: []},
         'sell': {page: 0, list: []},
-      }
+      },
+      currentType: 'pop',
+      isShowBackTop: true,
+      tabOffsetTop: 650,
+      isTabFixed: false
     }
   },
+  computed: {
+    showGoods(){   //通过计算属性的方式解决在组件上的实现功能的代码的可读性
+     return this.goods[this.currentType].list
+    }
+  },
+
   created() {  
     /*
       这样的封装--->就是一般实现功能的方法一般放在methods中，
@@ -58,13 +81,77 @@ export default {
     this.getHomeGoods('new')
     this.getHomeGoods('sell')
   },
+
+  mounted() {
+    //1.监听item中的图片加载完成
+    // this.$bus.$on('itemImageLoad', () => {    //利用事件总线的方式，在这里调用但图片加载完成时，调用scroll中refresh()对图片加载完成每一次进行刷新，解决首页可滚动区域的问题
+    //   this.$refs.scroll.refresh()
+    // })
+    const refresh = this.debounce(this.$refs.scroll.refresh,200)  //调用防抖函数
+    this.$bus.$on('itemImageLoad',() => {
+      refresh()
+    })
+
+  },
+
   methods: {
-      /**
-       * 网络请求相关的方法
-       */
+    /**
+     * 有关事件的方法
+     */
+    debounce(func,delay) {  //防抖函数---解决图片每次刷新从服务器请求次数过多，造成服务器瘫痪，通过防抖函数可以解决多次加载。
+      let timer =  null
+      return function(...args) {
+        if(timer) clearTimeout(timer)
+        timer = setTimeout(() => {
+          func.apply(this,args)
+        }, delay);
+      }
+    },
+    tabClick(index) {
+      // console.log(index)
+      switch(index){
+        case 0:
+          this.currentType = 'pop'
+        break
+        case 1: 
+          this.currentType = 'new'
+        break
+        case 2:
+          this.currentType = 'sell'
+        break
+      }
+      this.$refs.TabControl1.currentIndex = index   //解决吸顶效果之后遇到的索引的问题，具体在tabCtrol中体现
+      this.$refs.TabControl2.currentIndex = index
+    },
+    backTop() {
+      // this.$refs.scroll.scroll.scrollTo(0,0,500)  
+      //不采用这种的方式是因为在scroll组件内部封装一个scrollTo的函数，在这里只需要通过this.$refs的方式来获取对应的组件
+      this.$refs.scroll.scrollTo(0,0,500)
+    },
+    contentScroll(position){
+      //1.判断BackTop是否显示
+      this.isShowBackTop = (-position.y) > 1000
+
+      //2.决定tabControl是否吸顶(position: fixed)
+      this.isTabFixed = (-position.y) > this.tabOffsetTop
+    },
+    loadMore() {
+      this.getHomeGoods(this.currentType)
+    },
+    //获取tabControl的offsetTop
+    //所有组件都有一个属性$el，用于获取组件中的元素
+    swiperImageLoad() {
+      // console.log(this.$refs.TabControl.$el.offsetTop)
+      this.tabOffsetTop = this.$refs.TabControl2.$el.offsetTop
+    },
+
+    /**
+     * 网络请求相关的方法
+     */
     getHomeMultidata() {
       getHomeMultidata().then(res =>{
         // console.log(res.data.recommend)
+        // console.log(res.data.banner.list)
         this.banners = res.data.banner.list
         this.recommends = res.data.recommend.list
       })
@@ -82,6 +169,9 @@ export default {
       getHomeGoods(type,page).then(res => {
         this.goods[type].list.push(...res.data.list)
         this.goods[type].page += 1
+
+        //在数据加载完之后必须要调用此方法，才能进行下一次  ，，在这里我把此方法封装到scroll内部，通过$refs.scroll的方式调用内部的放方法
+        this.$refs.scroll.finishPullUp()//完成加载下拉更多
       })
     }
   },
@@ -91,6 +181,8 @@ export default {
 
 <style  scoped>
   #home{
+    position: relative;
+    height: 100vh;
     padding-top: 44px
     
   }
@@ -104,10 +196,17 @@ export default {
     z-index: 9
   }
   .tabcontrol{
-
-    position: sticky;
-    top: 43px;
+    position: relative;
     z-index: 9;
+
+  }
+  .content{
+    overflow: hidden;
+    position: absolute;
+    top: 44px;
+    bottom: 49px;
+    right: 0;
+    left: 0;
   }
 
 
