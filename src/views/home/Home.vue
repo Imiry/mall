@@ -33,6 +33,8 @@ import Scroll from 'components/common/scroll/Scroll'
 import BackTop from 'components/content/backTop/BackTop'
 
 import {getHomeMultidata,getHomeGoods} from 'network/home'
+import {debounce } from 'common/utils'
+import {itemListenerMixin} from 'common/mixin'
 export default {
   name: 'Home',
   components: {
@@ -59,14 +61,32 @@ export default {
       currentType: 'pop',
       isShowBackTop: true,
       tabOffsetTop: 650,
-      isTabFixed: false
+      isTabFixed: false,
+      saveY: 0,
+      
     }
   },
+  mixins: [itemListenerMixin],
   computed: {
     showGoods(){   //通过计算属性的方式解决在组件上的实现功能的代码的可读性
      return this.goods[this.currentType].list
-    }
+    } 
   },
+    destroyed() {
+      console.log('home destroyed');
+    },
+    activated() {
+      // console.log(this.saveY)
+      this.$refs.scroll.scrollTo(0, this.saveY, 0)
+      this.$refs.scroll.refresh()
+    },
+    deactivated() {
+      //1.保存Y的值
+      this.saveY = this.$refs.scroll.getScrollY()
+
+      //2.取消全局事件的监听----重点---->其中还利用到了mixin混入的知识
+      this.$bus.$off('itemImageLoad',this.itemImgListener)
+    },
 
   created() {  
     /*
@@ -87,26 +107,21 @@ export default {
     // this.$bus.$on('itemImageLoad', () => {    //利用事件总线的方式，在这里调用但图片加载完成时，调用scroll中refresh()对图片加载完成每一次进行刷新，解决首页可滚动区域的问题
     //   this.$refs.scroll.refresh()
     // })
-    const refresh = this.debounce(this.$refs.scroll.refresh,200)  //调用防抖函数
-    this.$bus.$on('itemImageLoad',() => {
-      refresh()
-    })
-
+    
+    //对监听事件的保存
+    // this.itemImgListener = () => {
+    //   refresh()
+    // } 
+    // const refresh = debounce(this.$refs.scroll.refresh,200)  //调用防抖函数
+    // this.$bus.$on('itemImageLoad',this.itemImgListener)
+    console.log('mounted')
   },
 
   methods: {
     /**
      * 有关事件的方法
      */
-    debounce(func,delay) {  //防抖函数---解决图片每次刷新从服务器请求次数过多，造成服务器瘫痪，通过防抖函数可以解决多次加载。
-      let timer =  null
-      return function(...args) {
-        if(timer) clearTimeout(timer)
-        timer = setTimeout(() => {
-          func.apply(this,args)
-        }, delay);
-      }
-    },
+
     tabClick(index) {
       // console.log(index)
       switch(index){

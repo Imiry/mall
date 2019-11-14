@@ -1,6 +1,6 @@
 <template>
   <div class="goods-item">
-    <img :src="goodsItem.show.img" alt="" @load="imageLoad">
+    <img :src="showImage" alt="" @load="imageLoad" @click="itemClick">
     <div class="goods-info">
       <p>{{goodsItem.title}}</p>
       <span class="price">{{goodsItem.price}}</span>
@@ -20,11 +20,26 @@ export default {
       }
     }
   },
+  computed: {
+    showImage() {
+       return this.goodsItem.image || this.goodsItem.show.img
+    }
+  },
   methods: {
     imageLoad() {     //在图片上有一个load的事件，当图片加载完成，利用事件总线的方式发送一个事件，满足在home.vue中的使用：具体解决图片加载完成之后的问题
       this.$bus.$emit('itemImageLoad')
+
+      
+      // if(this.$route.path.indexof('/home')){
+      //   this.$bus.$emit('homeitemImageLoad')
+      // }else if(this.$route.path.indexof('/detail')) {
+      //   this.$bus.$emit('detailitemImageLoad')
+      // }
+    },
+    itemClick() {
+      this.$router.push('/detail/' + this.goodsItem.iid)   //通过push的方式，跳转，在路由后面直接加参数iid，通过this.goodsItem.iid拿到iid
     }
-  },
+  }, 
 }
 </script>
 
