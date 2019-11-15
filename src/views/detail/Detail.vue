@@ -1,14 +1,17 @@
 <template>
   <div id="detail">
-    <detail-nav-bar class="detail-nav"></detail-nav-bar>
-    <scroll class="content" ref="scroll">
-      <detail-swiper :top-images="topImages"></detail-swiper>
-      <detail-base-info :goods="goods"></detail-base-info>
-      <detail-shop-info :shop="shop"></detail-shop-info>
-      <detail-goods-info :detail-info="detailInfo" @imageLoad="imageLoad" />
-      <detail-param-info :param-info="paramInfo"></detail-param-info>
-      <detail-comment-info :comment-info="commentinfo"></detail-comment-info>
-      <goods-list :goods="recommends"></goods-list>
+    <detail-nav-bar ref="nav" class="detail-nav" @titleClick="titleClick"/>
+    <scroll class="content" 
+            ref="scroll" 
+            :probe-type="3" 
+            @scroll="contentScroll">
+      <detail-swiper :top-images="topImages"/>
+      <detail-base-info :goods="goods"/>
+      <detail-shop-info :shop="shop"/>
+      <detail-goods-info :detail-info="detailInfo" @detailImageLoad="detailImageLoad" />
+      <detail-param-info ref="params" :param-info="paramInfo"/>
+      <detail-comment-info ref="comment" :comment-info="commentinfo"/>
+      <goods-list ref="recommend" :goods="recommends"/>
     </scroll>
  </div>
 </template>
@@ -51,7 +54,9 @@ export default {
       paramInfo: {},
       commentinfo: {},
       recommends: [],
-
+      themeTopYs: [],
+      getThemeTopY: null,
+      currentIndex: 0
     }
   },
   mixins: [itemListenerMixin],  //混入的知识点
@@ -80,25 +85,50 @@ export default {
       //6.获取评论信息
       this.commentinfo = data.rate.list[0]
     })
+
     //3.获取推荐数据
     getRcommend().then((res) => {
       this.recommends = res.data.list
     })
 
-  },
-  methods: {
-    imageLoad() {
-      this.$refs.scroll.refresh()
-    }
+    /*
+      //1.第一次获取，值不对，
+      //值不对的原因：this.$refs.params.$el压根没有渲染
+      this.themeTopYs = []
+      this.themeTopYs.push(0)
+      this.themeTopYs.push(this.$refs.params.$el.offsetTop)
+      this.themeTopYs.push(this.$refs.comment.$el.offsetTop)
+      this.themeTopYs.push(this.$refs.recommend.$el.offsetTop)
+      console.log(this.themeTopYs)
+
+      this.$nextTick(() => {
+        //2.第二次获取，值不对
+        //值不对原因： 图片没有计算在内
+        // 根据最新的数据，对应的DOM已经被渲染出来
+        // 但是图片依然是没有加载完(目前获取到的offsetTop不包含其中的图片)
+        // offsetTop值不对的时候，都是因为图片的问题
+        this.themeTopYs = []
+        this.themeTopYs.push(0)
+        this.themeTopYs.push(this.$refs.params.$el.offsetTop)
+        this.themeTopYs.push(this.$refs.comment.$el.offsetTop)
+        this.themeTopYs.push(this.$refs.recommend.$el.offsetTop)
+        console.log(this.themeTopYs)
+
+      })
+    */
+
+    this.getThemeTopY = debounce(() => {
+      this.themeTopYs = []
+      this.themeTopYs.push(0)
+      this.themeTopYs.push(this.$refs.params.$el.offsetTop)
+      this.themeTopYs.push(this.$refs.comment.$el.offsetTop)
+      this.themeTopYs.push(this.$refs.recommend.$el.offsetTop)
+      this.themeTopYs.push(Number.MAX_VALUE)
+      console.log(this.themeTopYs)
+    },200)
   },
 
   mounted() {
-    //对监听事件的保存
-    // this.itemImgListener = () => {
-    //   refresh()
-    // } 
-    // const refresh = debounce(this.$refs.scroll.refresh,200)  //调用防抖函数
-    // this.$bus.$on('itemImageLoad',this.itemImgListener)
 
   },
   // deactivated() {
@@ -107,6 +137,46 @@ export default {
   destroyed() {
     this.$bus.$off('itemImageLoad',this.itemImgListener)
     // console.log("00")
+  },
+
+  methods: {
+    detailImageLoad() {
+      this.refresh()    //利用混入的方式
+      this.getThemeTopY()  //在图片每次刷新的时候可以获取offsetTop的值，这时候图片都加载渲染完成
+    },
+    titleClick(index) {
+      this.$refs.scroll.scrollTo(0,-this.themeTopYs[index],200)
+    },
+    contentScroll(position) {
+      //1.获取y的值
+      const positionY = -position.y
+
+      //2.positionY和主题中的值进行对比
+      //[0, 6281, 7091, 7307]
+      //positionY 在 0 到 6281 之间， index = 0
+      //positionY 在 6281 到 70911 之间， index = 1
+      //positionY 在 7091 到 7307 之间， index = 2
+      //positionY 在 大于等于7307， index = 3
+      
+      //第一种方式，代码性能比较差，但是消耗内存比较小
+      // let length = this.themeTopYs.length
+      // for(var i = 0;i < length;i++){
+      //   if(this.currentIndex !== i && (i<length-1 && positionY >= this.themeTopYs[i] && positionY < this.themeTopYs[i+1] || (i === length-1 && positionY >= this.themeTopYs[i]))){
+      //     this.currentIndex = i    //做到不重复打印
+      //     this.$refs.nav.currentIndex = this.currentIndex
+      //   }
+      // }
+
+      //第二种方式，代码性能比较快，消耗内存比比较大
+      let length = this.themeTopYs.length
+      for (let i = 0; i <length-1; i++) {
+        if(this.currentIndex !== i && (positionY >= this.themeTopYs[i]) && positionY < this.themeTopYs[i+1]){
+          this.currentIndex = i    //做到不重复打印
+          this.$refs.nav.currentIndex = this.currentIndex
+        }
+        
+      }
+    }
   },
 }
 </script>

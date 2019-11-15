@@ -38,8 +38,8 @@ export default {
     display: flex;
     text-align: center;
     font-size: 15px;
-    height: 40px;
-    line-height: 40px;
+    height: 41px;
+    line-height: 41px;
     background-color: #fff;
   }
 

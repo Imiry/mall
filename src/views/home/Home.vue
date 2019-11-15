@@ -114,7 +114,7 @@ export default {
     // } 
     // const refresh = debounce(this.$refs.scroll.refresh,200)  //调用防抖函数
     // this.$bus.$on('itemImageLoad',this.itemImgListener)
-    console.log('mounted')
+    // console.log('mounted')
   },
 
   methods: {
