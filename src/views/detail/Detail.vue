@@ -13,6 +13,9 @@
       <detail-comment-info ref="comment" :comment-info="commentinfo"/>
       <goods-list ref="recommend" :goods="recommends"/>
     </scroll>
+    <detail-bottom-bar @addCart="addToCart"/>
+    <back-top @click.native="backTop()" v-show="isShowBackTop"/>
+
  </div>
 </template>
 
@@ -24,13 +27,16 @@ import DetailShopInfo from './childComps/DetailShopInfo'
 import DetailGoodsInfo from './childComps/DetailGoodsInfo'
 import DetailParamInfo from './childComps/DetailParamInfo'
 import DetailCommentInfo from './childComps/DetailCommentInfo'
+import DetailBottomBar from './childComps/DetailBottomBar'
 
 import Scroll from 'components/common/scroll/Scroll'
 import GoodsList from 'components/content/goods/GoodsList'
 
+
+
 import {getDetail,getRcommend,Goods,Shop,GoodsParam} from 'network/detail'
 import {debounce } from 'common/utils'
-import {itemListenerMixin} from 'common/mixin'
+import {itemListenerMixin,backTopmixin} from 'common/mixin'
 export default {
   name: 'Detail',
   components: {
@@ -41,6 +47,7 @@ export default {
     DetailGoodsInfo,
     DetailParamInfo,
     DetailCommentInfo,
+    DetailBottomBar,
     Scroll,
     GoodsList
   },
@@ -56,10 +63,11 @@ export default {
       recommends: [],
       themeTopYs: [],
       getThemeTopY: null,
-      currentIndex: 0
+      currentIndex: 0,
+      
     }
   },
-  mixins: [itemListenerMixin],  //混入的知识点
+  mixins: [itemListenerMixin,backTopmixin],  //混入的知识点
   created() {
     //1.保存传入的iid
     this.iid = this.$route.params.iid   //获取id
@@ -124,7 +132,7 @@ export default {
       this.themeTopYs.push(this.$refs.comment.$el.offsetTop)
       this.themeTopYs.push(this.$refs.recommend.$el.offsetTop)
       this.themeTopYs.push(Number.MAX_VALUE)
-      console.log(this.themeTopYs)
+      // console.log(this.themeTopYs)
     },200)
   },
 
@@ -176,7 +184,23 @@ export default {
         }
         
       }
+
+      this.listenShowBackTop(position)
+    },
+    addToCart() {
+      //1.获取购物车需要的展示的信息
+      const product = {}
+      product.image = this.topImages[0]
+      product.title = this.goods.title
+      product.desc = this.goods.desc
+      product.price = this.goods.realPrice
+      product.iid = this.iid
+
+      //2.将商品添加到购物车中
+      // this.$store.commit('addCart',product)
+      this.$store.dispatch('addCart',product)
     }
+
   },
 }
 </script>
