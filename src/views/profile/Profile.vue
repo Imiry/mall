@@ -1,12 +1,16 @@
 <template>
-  <div>
-    <h2>我的</h2>
+  <div class="profile">
+    <profile-nav-bar/>
   </div>
 </template>
 
 <script>
+import ProfileNavBar from './profilenavbar/ProfileNavBar'
 export default {
-  name: 'Profile'
+  name: 'Profile',
+  components: {
+    ProfileNavBar
+  }
 }
 </script>
 

@@ -15,7 +15,7 @@
     </scroll>
     <detail-bottom-bar @addCart="addToCart"/>
     <back-top @click.native="backTop()" v-show="isShowBackTop"/>
-
+    <!-- <toast :message="message" :show="show"/> -->
  </div>
 </template>
 
@@ -31,12 +31,15 @@ import DetailBottomBar from './childComps/DetailBottomBar'
 
 import Scroll from 'components/common/scroll/Scroll'
 import GoodsList from 'components/content/goods/GoodsList'
+// import Toast from 'components/common/toast/Toast'
 
 
 
 import {getDetail,getRcommend,Goods,Shop,GoodsParam} from 'network/detail'
 import {debounce } from 'common/utils'
 import {itemListenerMixin,backTopmixin} from 'common/mixin'
+
+import { mapActions } from 'vuex'
 export default {
   name: 'Detail',
   components: {
@@ -49,7 +52,8 @@ export default {
     DetailCommentInfo,
     DetailBottomBar,
     Scroll,
-    GoodsList
+    GoodsList,
+    // Toast
   },
   data() {
     return {
@@ -65,6 +69,8 @@ export default {
       getThemeTopY: null,
       currentIndex: 0,
       
+      // message: '',
+      // show: false
     }
   },
   mixins: [itemListenerMixin,backTopmixin],  //混入的知识点
@@ -148,6 +154,7 @@ export default {
   },
 
   methods: {
+    ...mapActions(['addCart']),
     detailImageLoad() {
       this.refresh()    //利用混入的方式
       this.getThemeTopY()  //在图片每次刷新的时候可以获取offsetTop的值，这时候图片都加载渲染完成
@@ -196,9 +203,21 @@ export default {
       product.price = this.goods.realPrice
       product.iid = this.iid
 
-      //2.将商品添加到购物车中
+      //2.将商品添加到购物车中(1.vuex中action可以返回Promise  2.vuex中mapActions的使用)
       // this.$store.commit('addCart',product)
-      this.$store.dispatch('addCart',product)
+      // this.$store.dispatch('addCart',product)
+      this.addCart(product).then((res) => {
+        // this.message = res
+        // this.show = true
+
+        // setTimeout(() => {
+        //   this.show = false
+        //   this.message = ''
+        // }, 1500);
+        // console.log(res)
+
+        this.$toast.show(res,2000)
+      })
     }
 
   },
